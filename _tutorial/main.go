@@ -74,7 +74,7 @@ func (e Event) Start() {
 }
 
 func main() {
-	e, err := InitializeEvent("hi there!")
+	e, _, err := InitializeEvent("hi there!")
 	if err != nil {
 		fmt.Printf("failed to create event: %s\n", err)
 		os.Exit(2)

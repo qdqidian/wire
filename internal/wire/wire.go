@@ -634,9 +634,11 @@ func injectPass(name string, sig *types.Signature, calls []call, set *ProviderSe
 	default:
 		ig.p(") %s {\n", outTypeString)
 	}
+	returnName := ""
 	for i := range calls {
 		c := &calls[i]
 		lname := typeVariableName(c.out, "v", unexport, ig.nameInInjector)
+
 		ig.localNames = append(ig.localNames, lname)
 		switch c.kind {
 		case structProvider:
@@ -650,11 +652,17 @@ func injectPass(name string, sig *types.Signature, calls []call, set *ProviderSe
 		default:
 			panic("unknown kind")
 		}
+		if !c.noDep {
+			returnName = lname
+		} else {
+			ig.p("discard(%s)\n", lname)
+		}
 	}
 	if len(calls) == 0 {
 		ig.p("\treturn %s", ig.paramNames[set.For(injectSig.out).Arg().Index])
 	} else {
-		ig.p("\treturn %s", ig.localNames[len(calls)-1])
+
+		ig.p("\treturn %s", returnName)
 	}
 	if injectSig.cleanup {
 		ig.p(", func() {\n")
@@ -667,6 +675,8 @@ func injectPass(name string, sig *types.Signature, calls []call, set *ProviderSe
 		ig.p(", nil")
 	}
 	ig.p("\n}\n\n")
+
+	ig.p("// discard 未引用的对象生成放弃使用\n func discard(p any) {}\n\n")
 }
 
 func (ig *injectorGen) funcProviderCall(lname string, c *call, injectSig outputSignature) {
@@ -680,7 +690,9 @@ func (ig *injectorGen) funcProviderCall(lname string, c *call, injectSig outputS
 	if c.hasErr {
 		ig.p(", %s", ig.errVar)
 	}
+
 	ig.p(" := ")
+
 	ig.p("%s(", ig.g.qualifiedID(c.pkg.Name(), c.pkg.Path(), c.name))
 	for i, a := range c.args {
 		if i > 0 {

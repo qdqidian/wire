@@ -8,12 +8,48 @@ package main
 
 // Injectors from wire.go:
 
-func InitializeEvent(phrase string) (Event, error) {
+// InitializeEvent creates an Event. It will error if the Event is staffed with
+// a grumpy greeter.
+func InitializeEvent(phrase string) (Event, func(), error) {
 	message := NewMessage(phrase)
 	greeter := NewGreeter(message)
 	event, err := NewEvent(greeter)
 	if err != nil {
-		return Event{}, err
+		return Event{}, nil, err
 	}
-	return event, nil
+	mainAa, cleanup, err := a(message)
+	if err != nil {
+		return Event{}, nil, err
+	}
+	discard(mainAa)
+	mainCc, err := c(greeter, mainAa)
+	if err != nil {
+		cleanup()
+		return Event{}, nil, err
+	}
+	discard(mainCc)
+	return event, func() {
+		cleanup()
+	}, nil
+}
+
+// discard 未引用的对象生成放弃使用
+func discard(p any) {}
+
+// wire.go:
+
+type cc struct {
+}
+
+func c(g Greeter, a2 *aa) (*cc, error) {
+	return &cc{}, nil
+}
+
+type aa struct {
+}
+
+func a(m Message) (*aa, func(), error) {
+	return &aa{}, func() {
+
+	}, nil
 }

@@ -39,6 +39,10 @@ const (
 // function call or a composite struct literal, depending on the value
 // of kind.
 type call struct {
+
+	// 没有依赖这个方法的
+	noDep bool
+
 	// kind indicates the code pattern to use.
 	kind callKind
 
@@ -114,6 +118,7 @@ func solve(fset *token.FileSet, out types.Type, given *types.Tuple, set *Provide
 		from types.Type
 		up   *frame
 	}
+	stkSolveCallsLength := 0
 	stk := []frame{{t: out}}
 dfs:
 	for len(stk) > 0 {
@@ -247,6 +252,33 @@ dfs:
 			panic("unknown return value from ProviderSet.For")
 		}
 	}
+
+	existMethods := make(map[string]bool, len(calls))
+	stk = []frame{}
+	for _, c := range calls {
+		existMethods[fmt.Sprintf("%s_%s", c.pkg, c.name)] = true
+	}
+	for _, p := range set.Providers {
+		if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+			for _, o := range p.Out {
+				stk = append(stk, frame{t: o})
+			}
+		}
+	}
+	if len(stk) > 0 {
+		stkSolveCallsLength = len(calls)
+		goto dfs
+	}
+
+	if stkSolveCallsLength > 0 {
+
+		//calls = append(calls[stkSolveCallsLength:], calls[:stkSolveCallsLength]...)
+		for i := stkSolveCallsLength; i < len(calls); i++ {
+			calls[i].noDep = true
+		}
+
+	}
+
 	if len(ec.errors) > 0 {
 		return nil, ec.errors
 	}
@@ -284,7 +316,7 @@ func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc) []error {
 			}
 		}
 		if !found {
-			errs = append(errs, fmt.Errorf("unused provider %q", p.Pkg.Name()+"."+p.Name))
+			//errs = append(errs, fmt.Errorf("unused provider %q", p.Pkg.Name()+"."+p.Name))
 		}
 	}
 	for _, v := range set.Values {

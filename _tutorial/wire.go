@@ -22,7 +22,25 @@ import "github.com/google/wire"
 
 // InitializeEvent creates an Event. It will error if the Event is staffed with
 // a grumpy greeter.
-func InitializeEvent(phrase string) (Event, error) {
-	wire.Build(NewEvent, NewGreeter, NewMessage)
-	return Event{}, nil
+func InitializeEvent(phrase string) (Event, func(), error) {
+	wire.Build(NewEvent, c, a, NewGreeter, NewMessage)
+	return Event{}, func() {
+
+	}, nil
+}
+
+type cc struct {
+}
+
+func c(g Greeter, a *aa) (*cc, error) {
+	return &cc{}, nil
+}
+
+type aa struct {
+}
+
+func a(m Message) (*aa, func(), error) {
+	return &aa{}, func() {
+
+	}, nil
 }
