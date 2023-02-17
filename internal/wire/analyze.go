@@ -279,12 +279,97 @@ dfs:
 		}
 	}
 
-	fmt.Printf("set import. %d, %v. %d\n", len(set.Imports), set.Providers, len(existMethods))
-	for _, imInfo := range set.Imports {
+	/**
+	 * todo:: 未来重构修改，现在最多支持4层import
+	 */
+	stk = []frame{}
+	imports := set.Imports
+	fmt.Printf("set import. %d, %v. %d\n", len(imports), set.Providers, len(existMethods))
+	for _, imInfo := range imports {
 		for _, p := range imInfo.Providers {
 			if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
 				for _, o := range p.Out {
 					stk = append(stk, frame{t: o})
+				}
+			}
+		}
+	}
+	if len(stk) > 0 {
+		stkSolveCallsLength = len(calls)
+		goto dfs
+	}
+
+	stk = []frame{}
+	for _, imInfo := range set.Imports {
+		for _, imInfo2 := range imInfo.Imports {
+			for _, p := range imInfo2.Providers {
+				if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+					for _, o := range p.Out {
+						stk = append(stk, frame{t: o})
+					}
+				}
+			}
+		}
+	}
+	if len(stk) > 0 {
+		stkSolveCallsLength = len(calls)
+		goto dfs
+	}
+
+	stk = []frame{}
+	for _, imInfo := range set.Imports {
+		for _, imInfo2 := range imInfo.Imports {
+			for _, imInfo3 := range imInfo2.Imports {
+				for _, p := range imInfo3.Providers {
+					if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+						for _, o := range p.Out {
+							stk = append(stk, frame{t: o})
+						}
+					}
+				}
+			}
+		}
+	}
+	if len(stk) > 0 {
+		stkSolveCallsLength = len(calls)
+		goto dfs
+	}
+
+	stk = []frame{}
+	for _, imInfo := range set.Imports {
+		for _, imInfo2 := range imInfo.Imports {
+			for _, imInfo3 := range imInfo2.Imports {
+				for _, imInfo4 := range imInfo3.Imports {
+					for _, p := range imInfo4.Providers {
+						if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+							for _, o := range p.Out {
+								stk = append(stk, frame{t: o})
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if len(stk) > 0 {
+		stkSolveCallsLength = len(calls)
+		goto dfs
+	}
+
+	stk = []frame{}
+	for _, imInfo := range set.Imports {
+		for _, imInfo2 := range imInfo.Imports {
+			for _, imInfo3 := range imInfo2.Imports {
+				for _, imInfo4 := range imInfo3.Imports {
+					for _, imInfo5 := range imInfo4.Imports {
+						for _, p := range imInfo5.Providers {
+							if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+								for _, o := range p.Out {
+									stk = append(stk, frame{t: o})
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -315,11 +400,11 @@ func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc) []error {
 			}
 		}
 		if !found {
-			if imp.VarName == "" {
-				errs = append(errs, errors.New("unused provider set"))
-			} else {
-				errs = append(errs, fmt.Errorf("unused provider set %q", imp.VarName))
-			}
+			//if imp.VarName == "" {
+			//	errs = append(errs, errors.New("unused provider set"))
+			//} else {
+			//	errs = append(errs, fmt.Errorf("unused provider set %q", imp.VarName))
+			//}
 		}
 	}
 	for _, p := range set.Providers {
