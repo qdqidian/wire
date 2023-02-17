@@ -179,6 +179,10 @@ type Provider struct {
 	HasErr bool
 }
 
+func (p *Provider) String() string {
+	return fmt.Sprintf("%s.%s", p.Pkg.String(), p.Name)
+}
+
 // ProviderInput describes an incoming edge in the provider graph.
 type ProviderInput struct {
 	Type types.Type
@@ -1173,9 +1177,9 @@ func (pt ProvidedType) IsNil() bool {
 //
 //   - For a function provider, this is the first return value type.
 //   - For a struct provider, this is either the struct type or the pointer type
-// 	   whose element type is the struct type.
-// 	 - For a value, this is the type of the expression.
-// 	 - For an argument, this is the type of the argument.
+//     whose element type is the struct type.
+//   - For a value, this is the type of the expression.
+//   - For an argument, this is the type of the argument.
 func (pt ProvidedType) Type() types.Type {
 	return pt.t
 }

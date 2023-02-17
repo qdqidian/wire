@@ -258,6 +258,7 @@ dfs:
 	for _, c := range calls {
 		existMethods[fmt.Sprintf("%s_%s", c.pkg, c.name)] = true
 	}
+	fmt.Printf("set providers. %d, %v. %d\n", len(set.Providers), set.Providers, len(existMethods))
 	for _, p := range set.Providers {
 		if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
 			for _, o := range p.Out {
@@ -276,7 +277,21 @@ dfs:
 		for i := stkSolveCallsLength; i < len(calls); i++ {
 			calls[i].noDep = true
 		}
+	}
 
+	fmt.Printf("set import. %d, %v. %d\n", len(set.Imports), set.Providers, len(existMethods))
+	for _, imInfo := range set.Imports {
+		for _, p := range imInfo.Providers {
+			if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+				for _, o := range p.Out {
+					stk = append(stk, frame{t: o})
+				}
+			}
+		}
+	}
+	if len(stk) > 0 {
+		stkSolveCallsLength = len(calls)
+		goto dfs
 	}
 
 	if len(ec.errors) > 0 {

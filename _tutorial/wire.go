@@ -29,11 +29,19 @@ func InitializeEvent(phrase string) (Event, func(), error) {
 	}, nil
 }
 
+type ccc interface {
+	aa()
+}
+
 type cc struct {
 }
 
-func c(g Greeter, a *aa) (*cc, error) {
+func c(g Greeter, a *aa) (ccc, error) {
 	return &cc{}, nil
+}
+
+func (c *cc) aa() {
+
 }
 
 type aa struct {

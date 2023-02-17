@@ -22,12 +22,12 @@ func InitializeEvent(phrase string) (Event, func(), error) {
 		return Event{}, nil, err
 	}
 	discard(mainAa)
-	mainCc, err := c(greeter, mainAa)
+	mainCcc, err := c(greeter, mainAa)
 	if err != nil {
 		cleanup()
 		return Event{}, nil, err
 	}
-	discard(mainCc)
+	discard(mainCcc)
 	return event, func() {
 		cleanup()
 	}, nil
@@ -38,11 +38,19 @@ func discard(p any) {}
 
 // wire.go:
 
+type ccc interface {
+	aa()
+}
+
 type cc struct {
 }
 
-func c(g Greeter, a2 *aa) (*cc, error) {
+func c(g Greeter, a2 *aa) (ccc, error) {
 	return &cc{}, nil
+}
+
+func (c2 *cc) aa() {
+
 }
 
 type aa struct {
