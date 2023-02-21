@@ -124,6 +124,8 @@ dfs:
 	for len(stk) > 0 {
 		curr := stk[len(stk)-1]
 		stk = stk[:len(stk)-1]
+		fmt.Printf("0. %+v\n", curr.t)
+
 		if index.At(curr.t) != nil {
 			continue
 		}
@@ -137,6 +139,7 @@ dfs:
 			}
 			sb := new(strings.Builder)
 			fmt.Fprintf(sb, "no provider found for %s", types.TypeString(curr.t, nil))
+			panic(sb.String())
 			for f := curr.up; f != nil; f = f.up {
 				fmt.Fprintf(sb, "\nneeded by %s in %s", types.TypeString(f.t, nil), set.srcMap.At(f.t).(*providerSetSrc).description(fset, f.t))
 			}
@@ -144,6 +147,7 @@ dfs:
 			index.Set(curr.t, errAbort)
 			continue
 		}
+
 		src := set.srcMap.At(curr.t).(*providerSetSrc)
 		used = append(used, src)
 		if concrete := pv.Type(); !types.Identical(concrete, curr.t) {
@@ -253,19 +257,40 @@ dfs:
 		}
 	}
 
-	existMethods := make(map[string]bool, len(calls))
+	existMethods := make(map[types.Type]bool, len(calls))
 	stk = []frame{}
+
 	for _, c := range calls {
-		existMethods[fmt.Sprintf("%s_%s", c.pkg, c.name)] = true
+		existMethods[c.out] = true
 	}
-	fmt.Printf("set providers. %d, %v. %d\n", len(set.Providers), set.Providers, len(existMethods))
-	for _, p := range set.Providers {
-		if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
-			for _, o := range p.Out {
-				stk = append(stk, frame{t: o})
+	fmt.Printf("exist methods. count: %d, index: %+v \n", len(existMethods), index.Len())
+
+	for _, t := range set.Outputs() {
+		fmt.Printf("is nil. %+v. %+v\n", t, set.For(t).IsNil())
+		if _, exist := existMethods[t]; !exist && index.At(t) == nil && !set.For(t).IsNil() {
+			isGiven := false
+			for i := 0; i < given.Len(); i++ {
+				if given.At(i).Type() == t {
+					isGiven = true
+					break
+				}
+			}
+			if !isGiven {
+				stk = append(stk, frame{t: t})
 			}
 		}
 	}
+
+	////fmt.Printf("set providers. %d, %v. %d\n", len(set.Providers), set.Providers, len(existMethods))
+	//for _, p := range set.Providers {
+	//	if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+	//		fmt.Printf("not exist.. %s%s\n", p.Pkg, p.Name)
+	//		for _, o := range p.Out {
+	//			stk = append(stk, frame{t: o})
+	//			fmt.Printf("stk to.. %+v\n", o.String())
+	//		}
+	//	}
+	//}
 	if len(stk) > 0 {
 		stkSolveCallsLength = len(calls)
 		goto dfs
@@ -278,106 +303,112 @@ dfs:
 			calls[i].noDep = true
 		}
 	}
-
-	/**
-	 * todo:: 未来重构修改，现在最多支持4层import
-	 */
-	stk = []frame{}
-	imports := set.Imports
-	fmt.Printf("set import. %d, %v. %d\n", len(imports), set.Providers, len(existMethods))
-	for _, imInfo := range imports {
-		for _, p := range imInfo.Providers {
-			if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
-				for _, o := range p.Out {
-					stk = append(stk, frame{t: o})
-				}
-			}
-		}
-	}
-	if len(stk) > 0 {
-		stkSolveCallsLength = len(calls)
-		goto dfs
-	}
-
-	stk = []frame{}
-	for _, imInfo := range set.Imports {
-		for _, imInfo2 := range imInfo.Imports {
-			for _, p := range imInfo2.Providers {
-				if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
-					for _, o := range p.Out {
-						stk = append(stk, frame{t: o})
-					}
-				}
-			}
-		}
-	}
-	if len(stk) > 0 {
-		stkSolveCallsLength = len(calls)
-		goto dfs
-	}
-
-	stk = []frame{}
-	for _, imInfo := range set.Imports {
-		for _, imInfo2 := range imInfo.Imports {
-			for _, imInfo3 := range imInfo2.Imports {
-				for _, p := range imInfo3.Providers {
-					if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
-						for _, o := range p.Out {
-							stk = append(stk, frame{t: o})
-						}
-					}
-				}
-			}
-		}
-	}
-	if len(stk) > 0 {
-		stkSolveCallsLength = len(calls)
-		goto dfs
-	}
-
-	stk = []frame{}
-	for _, imInfo := range set.Imports {
-		for _, imInfo2 := range imInfo.Imports {
-			for _, imInfo3 := range imInfo2.Imports {
-				for _, imInfo4 := range imInfo3.Imports {
-					for _, p := range imInfo4.Providers {
-						if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
-							for _, o := range p.Out {
-								stk = append(stk, frame{t: o})
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	if len(stk) > 0 {
-		stkSolveCallsLength = len(calls)
-		goto dfs
-	}
-
-	stk = []frame{}
-	for _, imInfo := range set.Imports {
-		for _, imInfo2 := range imInfo.Imports {
-			for _, imInfo3 := range imInfo2.Imports {
-				for _, imInfo4 := range imInfo3.Imports {
-					for _, imInfo5 := range imInfo4.Imports {
-						for _, p := range imInfo5.Providers {
-							if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
-								for _, o := range p.Out {
-									stk = append(stk, frame{t: o})
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	if len(stk) > 0 {
-		stkSolveCallsLength = len(calls)
-		goto dfs
-	}
+	//
+	///**
+	// * todo:: 未来重构修改，现在最多支持4层import
+	// */
+	//stk = []frame{}
+	//imports := set.Imports
+	//fmt.Printf("set import. %d, %v. %d\n", len(imports), set.Providers, len(existMethods))
+	//for _, imInfo := range imports {
+	//	for _, p := range imInfo.Providers {
+	//		if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+	//			for _, o := range p.Out {
+	//				stk = append(stk, frame{t: o})
+	//				fmt.Printf("stk to... %+v\n", o.String())
+	//			}
+	//		}
+	//	}
+	//}
+	//if len(stk) > 0 {
+	//	stkSolveCallsLength = len(calls)
+	//	goto dfs
+	//}
+	//
+	//stk = []frame{}
+	//for _, imInfo := range set.Imports {
+	//	for _, imInfo2 := range imInfo.Imports {
+	//		for _, p := range imInfo2.Providers {
+	//			if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+	//				fmt.Printf("not exist. %s%s\n", p.Pkg, p.Name)
+	//				for _, o := range p.Out {
+	//					stk = append(stk, frame{t: o})
+	//					fmt.Printf("stk to.... %+v\n", o.String())
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
+	//if len(stk) > 0 {
+	//	stkSolveCallsLength = len(calls)
+	//	goto dfs
+	//}
+	//
+	//stk = []frame{}
+	//for _, imInfo := range set.Imports {
+	//	for _, imInfo2 := range imInfo.Imports {
+	//		for _, imInfo3 := range imInfo2.Imports {
+	//			for _, p := range imInfo3.Providers {
+	//				if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+	//					for _, o := range p.Out {
+	//						stk = append(stk, frame{t: o})
+	//						fmt.Printf("stk to..... %+v\n", o.String())
+	//					}
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
+	//if len(stk) > 0 {
+	//	stkSolveCallsLength = len(calls)
+	//	goto dfs
+	//}
+	//
+	//stk = []frame{}
+	//for _, imInfo := range set.Imports {
+	//	for _, imInfo2 := range imInfo.Imports {
+	//		for _, imInfo3 := range imInfo2.Imports {
+	//			for _, imInfo4 := range imInfo3.Imports {
+	//				for _, p := range imInfo4.Providers {
+	//					if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+	//						for _, o := range p.Out {
+	//							stk = append(stk, frame{t: o})
+	//							fmt.Printf("stk to...... %+v\n", o.String())
+	//						}
+	//					}
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
+	//if len(stk) > 0 {
+	//	stkSolveCallsLength = len(calls)
+	//	goto dfs
+	//}
+	//
+	//stk = []frame{}
+	//for _, imInfo := range set.Imports {
+	//	for _, imInfo2 := range imInfo.Imports {
+	//		for _, imInfo3 := range imInfo2.Imports {
+	//			for _, imInfo4 := range imInfo3.Imports {
+	//				for _, imInfo5 := range imInfo4.Imports {
+	//					for _, p := range imInfo5.Providers {
+	//						if _, exist := existMethods[fmt.Sprintf("%s_%s", p.Pkg, p.Name)]; !exist {
+	//							for _, o := range p.Out {
+	//								stk = append(stk, frame{t: o})
+	//								fmt.Printf("stk to....... %+v", o.String())
+	//							}
+	//						}
+	//					}
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
+	//if len(stk) > 0 {
+	//	stkSolveCallsLength = len(calls)
+	//	goto dfs
+	//}
 
 	if len(ec.errors) > 0 {
 		return nil, ec.errors

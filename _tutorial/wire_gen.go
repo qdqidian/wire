@@ -6,6 +6,10 @@
 
 package main
 
+import (
+	"github.com/google/wire"
+)
+
 // Injectors from wire.go:
 
 // InitializeEvent creates an Event. It will error if the Event is staffed with
@@ -37,6 +41,8 @@ func InitializeEvent(phrase string) (Event, func(), error) {
 func discard(p any) {}
 
 // wire.go:
+
+var cccc = wire.NewSet(c)
 
 type ccc interface {
 	aa()
